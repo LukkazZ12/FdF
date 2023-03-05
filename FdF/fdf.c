@@ -51,6 +51,7 @@ int	main(int argc, char	*argv[])
 	t_point	**map;
 	char	*res;
 	char	**split;
+	char	**z_color;
 
 	rows = 1;
 	cols = 1;
@@ -92,17 +93,16 @@ int	main(int argc, char	*argv[])
 	close(fd);
 	map = malloc(sizeof(t_point) * (rows + 1));
 	map[rows] = NULL;
-	aux_rows = rows;
+	aux_rows = rows - 1;
 	while (aux_rows >= 0)
 	{
-		map[aux_rows - 1] = malloc(sizeof(t_point) * (cols + 1));
-		ft_bzero((t_point *)&map[aux_rows - 1][cols], 16);
+		map[aux_rows] = malloc(sizeof(t_point) * (cols + 1));
+		map[aux_rows][cols] = (t_point){0};
 		aux_rows--;
 	}
 	aux_rows = 0;
 	scale = WIN_HEIGHT / sqrt(pow(rows, 2) + pow(cols, 2));
 	printf("\nscale = %d\n", scale);
-	aux_free = rows;
 	fd = open(argv[1], O_RDONLY);
 	while (aux_rows < rows)
 	{
@@ -112,21 +112,40 @@ int	main(int argc, char	*argv[])
 		{
 			map[aux_rows][aux_cols].x = aux_rows * scale;
 			map[aux_rows][aux_cols].y = aux_cols * scale;
-			map[aux_rows][aux_cols].z = ft_atoi(split[aux_cols]);
+			if (ft_strchr(split[aux_cols], ','))
+			{
+				z_color = ft_split(split[aux_cols], ',');
+				map[aux_rows][aux_cols].z = ft_atoi(z_color[0]);
+				map[aux_rows][aux_cols].color = ft_atohexa(z_color[1]);
+				//free(z_color[3]);
+				free(z_color[2]);
+				free(z_color[1]);
+				free(z_color[0]);
+				free(z_color);
+			}
+			else
+			{
+				map[aux_rows][aux_cols].z = ft_atoi(split[aux_cols]);
+				map[aux_rows][aux_cols].color = 0xFFFFFF;
+			}
 			x = map[aux_rows][aux_cols].x;
 			y = map[aux_rows][aux_cols].y;
 			z = map[aux_rows][aux_cols].z;
 			map[aux_rows][aux_cols].x = cos_b_mtx * x + sin_b_mtx * y;
 			map[aux_rows][aux_cols].y = cos_a_mtx * sin_b_mtx * x - cos_a_mtx * cos_b_mtx * y - sin_a_mtx * z;
-			map[aux_rows][aux_cols].color = 0;
 			aux_cols++;
 		}
+		aux_free = cols;
 		while (aux_free >= 0)
-			free(split[aux_free--]);
+		{
+			free(split[aux_free]);
+			aux_free--;
+		}
 		free(split);
 		aux_cols = 0;
 		aux_rows++;
 	}
+	printf("COR?: %f %f", map[2][2].z, map[2][2].color);
 	center[0] = map[0][cols - 1].x - map[rows - 1][0].x - 2 * (map[0][0].x - map[rows - 1][0].x);
 	center[1] = map[rows - 1][cols - 1].y - map[0][0].y;
 	printf("extremos: %f %f\n", map[0][cols - 1].x, map[0][cols - 1].y);
@@ -134,6 +153,8 @@ int	main(int argc, char	*argv[])
 	printf("extremos: %f %f\n", map[0][0].x, map[0][0].y);
 	printf("extremos: %f %f\n", map[rows - 1][0].x, map[rows - 1][0].y);
 	printf("diferenças: %f %f\n", center[0], center[1]);
+	printf("HEXA: %i\n", 00123);
+	printf("DEU CERTO?: %i\n", ft_atohexa("FFFFFF"));
 	aux_rows = 0;
 	aux_cols = 0;
 	while (aux_rows < rows)
@@ -156,12 +177,19 @@ int	main(int argc, char	*argv[])
 	{
 		while (aux_cols < cols)
 		{
-			mlx_pixel_put(mlx_ptr, win_ptr, map[aux_rows][aux_cols].x, map[aux_rows][aux_cols].y, 0xFFFFFF);
+			mlx_pixel_put(mlx_ptr, win_ptr, map[aux_rows][aux_cols].x, map[aux_rows][aux_cols].y, map[aux_rows][aux_cols].color);
 			aux_cols++;
 		}
 		aux_cols = 0;
 		aux_rows++;
 	}
+	aux_free = rows;
+	while (aux_free >= 0)
+	{
+		free(map[aux_free]);
+		aux_free--;
+	}
+	free(map);
 	mlx_loop(mlx_ptr);
 	return (0);
 }
