@@ -12,7 +12,7 @@
 
 #include "libft.h"
 
-int	ft_atohexa(const char *nptr)
+int	ft_atohexa(char *nptr)
 {
 	int		num;
 	int		i;
@@ -23,6 +23,8 @@ int	ft_atohexa(const char *nptr)
 	pow_hexa = pow(16, 5);
 	while (nptr[i])
 	{
+		if (nptr[i] >= 'a' && nptr[i] <= 'f')
+			nptr[i] = nptr[i] - 32;
 		num += (ft_strchr(HEXA, nptr[i]) - &HEXA[0]) * pow_hexa;
 		pow_hexa /= 16;
 		i++;
