@@ -115,6 +115,12 @@ int	main(int argc, char	*argv[])
 			if (ft_strchr(split[aux_cols], ','))
 			{
 				z_color = ft_split(split[aux_cols], ',');
+				if (aux_cols == cols - 1)
+				{
+					z_color[1][ft_strlen(z_color[1]) - 1] = '\0';
+					if (aux_rows == 0)
+						printf("\nCOR ULTIMA LINHA: %s---\n", z_color[1]);
+				}
 				map[aux_rows][aux_cols].z = ft_atoi(z_color[0]);
 				map[aux_rows][aux_cols].color = ft_atohexa(z_color[1]);
 				//free(z_color[3]);
@@ -145,7 +151,7 @@ int	main(int argc, char	*argv[])
 		aux_cols = 0;
 		aux_rows++;
 	}
-	printf("COR?: %f %f", map[2][2].z, map[2][2].color);
+	printf("COR?: %f %f", map[0][cols - 2].z, map[0][cols - 2].color);
 	center[0] = map[0][cols - 1].x - map[rows - 1][0].x - 2 * (map[0][0].x - map[rows - 1][0].x);
 	center[1] = map[rows - 1][cols - 1].y - map[0][0].y;
 	printf("extremos: %f %f\n", map[0][cols - 1].x, map[0][cols - 1].y);

@@ -16,11 +16,13 @@ int	ft_atohexa(char *nptr)
 {
 	int		num;
 	int		i;
+	int		len;
 	int		pow_hexa;
 
 	num = 0;
 	i = 2;
-	pow_hexa = pow(16, 5);
+	len = ft_strlen(&nptr[i]) - 1;
+	pow_hexa = pow(16, len);
 	while (nptr[i])
 	{
 		if (nptr[i] >= 'a' && nptr[i] <= 'f')
