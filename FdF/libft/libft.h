@@ -13,7 +13,7 @@
 #ifndef LIBFT_H
 # define LIBFT_H
 
-# define BUFFER_SIZE 100
+# define BUFFER_SIZE 500
 # define HEXA "0123456789ABCDEF"
 
 # include <stdlib.h>

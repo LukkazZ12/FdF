@@ -27,10 +27,25 @@ typedef struct s_point {
 	double	color;
 }	t_point;
 
+static void	mlx_put_pixel_img(char *addr_ptr, int line_length, int bits_per_pixel, int x, int y, double color)
+{
+	char	*dst;
+
+	if (x > WIN_WIDTH || x < 0 || y > WIN_HEIGHT || y < 0)
+		return ;
+	dst = addr_ptr + (y * line_length + x * bits_per_pixel / 8);
+	*(unsigned int *)dst = color;
+}
+
 int	main(int argc, char	*argv[])
 {
 	void	*mlx_ptr;
 	void	*win_ptr;
+	void	*img_ptr;
+	char	*addr_ptr;
+	int		bits_per_pixel;
+	int		endian;
+	int		line_length;
 	int		rows;
 	int		cols;
 	int		aux_rows;
@@ -38,6 +53,15 @@ int	main(int argc, char	*argv[])
 	int		aux_free;
 	int		fd;
 	int		scale;
+	int		aux_x1;
+	int		aux_y1;
+	int		aux_x2;
+	int		aux_y2;
+	int		dx;
+	int		dy;
+	int		e;
+	int		step;
+	int		temp;
 	double	alpha;
 	double	beta;
 	double	sin_a_mtx;
@@ -53,12 +77,16 @@ int	main(int argc, char	*argv[])
 	char	**split;
 	char	**z_color;
 
+	mlx_ptr = mlx_init();
+	win_ptr = mlx_new_window(mlx_ptr, WIN_WIDTH, WIN_HEIGHT, "FdF_lucade-s");
+	img_ptr = mlx_new_image(mlx_ptr, WIN_WIDTH, WIN_HEIGHT);
+	addr_ptr = mlx_get_data_addr(img_ptr, &bits_per_pixel, &line_length, &endian);
 	rows = 1;
 	cols = 1;
 	aux_rows = 0;
 	aux_cols = 0;
 	alpha = atan(M_SQRT2);
-	beta = 3 * M_PI_4;
+	beta = M_PI_4;
 	sin_a_mtx = sin(alpha);
 	cos_a_mtx = cos(alpha);
 	sin_b_mtx = sin(beta);
@@ -71,25 +99,26 @@ int	main(int argc, char	*argv[])
 	fd = open(argv[1], O_RDONLY);
 	res = get_next_line(fd);
 	if (res[0] == ' ')
-				cols--;
-	while (res[aux_rows])
+		cols--;
+	while (res[aux_cols])
 	{
-		if (res[aux_rows] == ' ')
+		if (res[aux_cols] == ' ')
 		{
-			while (res[aux_rows] == ' ')
-				aux_rows++;
-			if (res[aux_rows] != '\n')
+			while (res[aux_cols] == ' ')
+				aux_cols++;
+			if (res[aux_cols] != '\n')
 				cols++;
 		}
-		aux_rows++;
+		aux_cols++;
 	}
-	while (res != NULL)
+	while (res)
 	{
 		res = get_next_line(fd);
-		if (res != NULL)
+		if (res)
 			rows++;
+		free(res);
 	}
-	printf("i = %d, j = %d", rows, cols);
+	printf("rows = %d, cols = %d", rows, cols);
 	close(fd);
 	map = malloc(sizeof(t_point) * (rows + 1));
 	map[rows] = NULL;
@@ -101,8 +130,9 @@ int	main(int argc, char	*argv[])
 		aux_rows--;
 	}
 	aux_rows = 0;
+	aux_cols = 0;
 	scale = WIN_HEIGHT / sqrt(pow(rows, 2) + pow(cols, 2));
-	printf("\nscale = %d\n", scale);
+	//printf("\nscale = %d\n", scale);
 	fd = open(argv[1], O_RDONLY);
 	while (aux_rows < rows)
 	{
@@ -110,8 +140,8 @@ int	main(int argc, char	*argv[])
 		split = ft_split(res, ' ');
 		while (aux_cols < cols)
 		{
-			map[aux_rows][aux_cols].x = aux_rows * scale;
-			map[aux_rows][aux_cols].y = aux_cols * scale;
+			map[aux_rows][aux_cols].y = aux_rows * scale;
+			map[aux_rows][aux_cols].x = aux_cols * scale;
 			if (ft_strchr(split[aux_cols], ','))
 			{
 				z_color = ft_split(split[aux_cols], ',');
@@ -123,7 +153,7 @@ int	main(int argc, char	*argv[])
 				}
 				map[aux_rows][aux_cols].z = ft_atoi(z_color[0]);
 				map[aux_rows][aux_cols].color = ft_atohexa(z_color[1]);
-				//free(z_color[3]);
+				free(z_color[3]);
 				free(z_color[2]);
 				free(z_color[1]);
 				free(z_color[0]);
@@ -137,8 +167,8 @@ int	main(int argc, char	*argv[])
 			x = map[aux_rows][aux_cols].x;
 			y = map[aux_rows][aux_cols].y;
 			z = map[aux_rows][aux_cols].z;
-			map[aux_rows][aux_cols].x = cos_b_mtx * x + sin_b_mtx * y;
-			map[aux_rows][aux_cols].y = cos_a_mtx * sin_b_mtx * x - cos_a_mtx * cos_b_mtx * y - sin_a_mtx * z;
+			map[aux_rows][aux_cols].x = cos_b_mtx * x - sin_b_mtx * y;
+			map[aux_rows][aux_cols].y = cos_a_mtx * sin_b_mtx * x + cos_a_mtx * cos_b_mtx * y - sin_a_mtx * z;
 			aux_cols++;
 		}
 		aux_free = cols;
@@ -148,19 +178,12 @@ int	main(int argc, char	*argv[])
 			aux_free--;
 		}
 		free(split);
+		free(res);
 		aux_cols = 0;
 		aux_rows++;
 	}
-	printf("COR?: %f %f", map[0][cols - 2].z, map[0][cols - 2].color);
 	center[0] = map[0][cols - 1].x - map[rows - 1][0].x - 2 * (map[0][0].x - map[rows - 1][0].x);
 	center[1] = map[rows - 1][cols - 1].y - map[0][0].y;
-	printf("extremos: %f %f\n", map[0][cols - 1].x, map[0][cols - 1].y);
-	printf("extremos: %f %f\n", map[rows - 1][cols - 1].x, map[rows - 1][cols - 1].y);
-	printf("extremos: %f %f\n", map[0][0].x, map[0][0].y);
-	printf("extremos: %f %f\n", map[rows - 1][0].x, map[rows - 1][0].y);
-	printf("diferenças: %f %f\n", center[0], center[1]);
-	printf("HEXA: %i\n", 00123);
-	printf("DEU CERTO?: %i\n", ft_atohexa("FFFFFF"));
 	aux_rows = 0;
 	aux_cols = 0;
 	while (aux_rows < rows)
@@ -174,21 +197,136 @@ int	main(int argc, char	*argv[])
 		aux_cols = 0;
 		aux_rows++;
 	}
-	//printf("\n%f %f %f %f\n", map[2][2].x, map[2][2].y, map[2][2].z, map[2][2].color);
-	mlx_ptr = mlx_init();
-	win_ptr = mlx_new_window(mlx_ptr, WIN_WIDTH, WIN_HEIGHT, "FdF_lucade-s");
 	aux_rows = 0;
 	aux_cols = 0;
 	while (aux_rows < rows)
 	{
 		while (aux_cols < cols)
 		{
-			mlx_pixel_put(mlx_ptr, win_ptr, map[aux_rows][aux_cols].x, map[aux_rows][aux_cols].y, map[aux_rows][aux_cols].color);
+			if (aux_cols < cols -1)
+			{
+				aux_x1 = map[aux_rows][aux_cols].x;
+				aux_y1 = map[aux_rows][aux_cols].y;
+				aux_x2 = map[aux_rows][aux_cols + 1].x;
+				aux_y2 = map[aux_rows][aux_cols + 1].y;
+				if (aux_x1 > aux_x2)
+				{
+					temp = aux_x1;
+					aux_x1 = aux_x2;
+					aux_x2 = temp;
+					temp = aux_y1;
+					aux_y1 = aux_y2;
+					aux_y2 = temp;
+				}
+				dx = aux_x2 - aux_x1;
+				dy = aux_y2 - aux_y1;
+				if (abs(dy) > abs(dx))
+				{	
+					step = 1;
+					e = 0;
+					if (dy < 0)
+					{
+						step = -1;
+						dy *= -1;
+					}
+					while (aux_y1 != aux_y2)
+					{
+						mlx_put_pixel_img(addr_ptr, line_length, bits_per_pixel, aux_x1, aux_y1, map[aux_rows][aux_cols].color);
+						aux_y1 += step;
+						e += 2 * dx;	
+						if (e >= 2 * dy)
+						{
+							aux_x1++;
+							e -= 2 * dy;
+						}
+					}
+				}
+				else
+				{
+					step = 1;
+					e = 0;
+					if (dy < 0)
+					{
+						step = -1;
+						dy *= -1;
+					}
+					while (aux_x1 <= aux_x2)
+					{
+						mlx_put_pixel_img(addr_ptr, line_length, bits_per_pixel, aux_x1++, aux_y1, map[aux_rows][aux_cols].color);
+						e += 2 * dy;
+						if (e >= 2 * dx)
+						{
+							aux_y1 += step;
+							e -= 2 * dx;
+						}
+					}
+				}
+			}
+			if (aux_rows < rows -1)
+			{
+				aux_x1 = map[aux_rows][aux_cols].x;
+				aux_y1 = map[aux_rows][aux_cols].y;
+				aux_x2 = map[aux_rows + 1][aux_cols].x;
+				aux_y2 = map[aux_rows + 1][aux_cols].y;
+				if (aux_x1 > aux_x2)
+				{
+					temp = aux_x1;
+					aux_x1 = aux_x2;
+					aux_x2 = temp;
+					temp = aux_y1;
+					aux_y1 = aux_y2;
+					aux_y2 = temp;
+				}
+				dx = aux_x2 - aux_x1;
+				dy = aux_y2 - aux_y1;
+				if (abs(dy) > abs(dx))
+				{	
+					step = 1;
+					e = 0;
+					if (dy < 0)
+					{
+						step = -1;
+						dy *= -1;
+					}
+					while (aux_y1 != aux_y2)
+					{
+						mlx_put_pixel_img(addr_ptr, line_length, bits_per_pixel, aux_x1, aux_y1, map[aux_rows][aux_cols].color);
+						aux_y1 += step;
+						e += 2 * dx;	
+						if (e >= 2 * dy)
+						{
+							aux_x1++;
+							e -= 2 * dy;
+						}
+					}
+				}
+				else
+				{
+					step = 1;
+					e = 0;
+					if (dy < 0)
+					{
+						step = -1;
+						dy *= -1;
+					}
+					while (aux_x1 <= aux_x2)
+					{
+						mlx_put_pixel_img(addr_ptr, line_length, bits_per_pixel, aux_x1++, aux_y1, map[aux_rows][aux_cols].color);
+						e += 2 * dy;
+						if (e >= 2 * dx)
+						{
+							aux_y1 += step;
+							e -= 2 * dx;
+						}
+					}
+				}
+			}
 			aux_cols++;
 		}
 		aux_cols = 0;
 		aux_rows++;
 	}
+	mlx_put_image_to_window(mlx_ptr, win_ptr, img_ptr, 0, 0);
 	aux_free = rows;
 	while (aux_free >= 0)
 	{

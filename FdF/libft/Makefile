@@ -67,7 +67,7 @@ fclean: clean
 
 re: fclean all
 
-%.o: %.c
+%.o: %.c libft.h
 	cc $(CFLAGS) -c $< -o $@
 	ar rcs $(NAME) $@
 
